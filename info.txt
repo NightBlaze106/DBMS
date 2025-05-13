@@ -1,0 +1,321 @@
+# Habit Tracker Application Documentation
+
+## Project Overview
+The Habit Tracker is a full-stack web application built with:
+- Frontend: React + TypeScript + Chakra UI
+- Backend: FastAPI (Python)
+- Database: MongoDB
+
+## Backend Implementation Details
+
+### Database Configuration (database.py)
+```python
+# MongoDB Setup
+- Connection using pymongo.MongoClient
+- Environment variables:
+  * MONGO_URL: MongoDB connection string
+- Database: "HabitTracker"
+- Collections:
+  * UsersCollection
+  * HabitsCollection
+  * HabitsLogCollections
+```
+
+### Data Models (models.py)
+```python
+1. User Model
+{
+    username: str,      # Required
+    email: str,        # Required
+    password: str      # Required, will be hashed
+}
+
+2. Habit Model
+{
+    user_id: str,      # Required, links to user
+    name: str,         # Required
+    streak: int,       # Default: 0
+    last_updated: datetime,  # Optional
+    completion_dates: list[datetime]  # Track completions
+}
+
+3. HabitLog Model
+{
+    habit_id: str,     # Required
+    date: str,         # Required
+    status: str        # "done" or "not done"
+}
+```
+
+### Authentication System (auth_utils.py)
+```python
+# Security Configuration
+- SECRET_KEY: Environment variable
+- ALGORITHM: Environment variable (default: HS256)
+- ACCESS_TOKEN_EXPIRE_MINUTES: Environment variable (default: 15)
+
+# Password Management
+- Using passlib.context with bcrypt scheme
+- Functions:
+  * hash_password(password: str) -> str
+  * verify_password(plain_password: str, hashed_password: str) -> bool
+
+# JWT Token Management
+- create_access_token(data: dict, expires_delta: Optional[timedelta])
+  * Creates JWT with expiration
+  * Uses SECRET_KEY and ALGORITHM
+  * Returns encoded token
+
+- decode_access_token(token: str)
+  * Decodes and validates JWT
+  * Returns payload or None if invalid
+
+- get_current_user(token: str)
+  * FastAPI dependency for protected routes
+  * Validates token and returns user data
+  * Raises 401 if invalid
+```
+
+### Database Operations
+
+#### User Operations
+```python
+# Create User
+users_collection.insert_one({
+    "username": str,
+    "email": str,
+    "password": hashed_str
+})
+
+# Find User
+users_collection.find_one({
+    "email": str
+})
+```
+
+#### Habit Operations
+```python
+# Create Habit
+habits_collection.insert_one({
+    "user_id": str,
+    "name": str,
+    "streak": 0,
+    "completion_dates": [],
+    "last_updated": datetime
+})
+
+# Get User's Habits
+habits_collection.find({
+    "user_id": str
+})
+
+# Mark Habit Complete
+habits_collection.update_one(
+    {"_id": ObjectId, "user_id": str},
+    {
+        "$set": {
+            "streak": int,
+            "last_updated": datetime,
+            "completion_dates": list[datetime]
+        }
+    }
+)
+
+# Update Habit
+habits_collection.update_one(
+    {"_id": ObjectId, "user_id": str},
+    {"$set": {"name": str}}
+)
+
+# Delete Habit
+habits_collection.delete_one({
+    "_id": ObjectId,
+    "user_id": str
+})
+```
+
+### Environment Variables Required
+```
+MONGO_URL=mongodb://localhost:27017/
+SECRET_KEY=your-secret-key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=15
+```
+
+### Security Features
+
+1. Authentication
+- Bcrypt password hashing
+- JWT-based authentication
+- Token expiration
+- Protected routes using FastAPI dependencies
+
+2. Data Security
+- Environment variable configuration
+- User-specific data isolation
+- Input validation using Pydantic models
+- Error handling with HTTP exceptions
+
+3. API Security
+- OAuth2 password bearer scheme
+- Token validation middleware
+- Request validation through Pydantic
+- CORS protection
+
+## Error Handling
+
+1. Backend Errors
+- HTTPException with status codes:
+  * 401: Invalid authentication
+  * 404: Resource not found
+  * 400: Bad request/validation error
+  * 500: Server error
+
+2. Database Errors
+- Connection error handling
+- Document not found handling
+- Duplicate key handling
+
+## Future Enhancements Possible
+1. Implement HabitLog collection functionality
+2. Add user profile management
+3. Add habit categories
+4. Implement reminder system
+5. Add data export functionality
+6. Add achievement system
+7. Implement social features
+8. Add data visualization 
+
+## Database Schema Details
+
+### Collections and Their Relationships
+
+1. UsersCollection
+```
+{
+    _id: ObjectId,           // Primary Key
+    username: string,        // Required, Indexed
+    email: string,          // Required, Unique, Indexed
+    password: string,       // Required (Hashed)
+}
+```
+
+2. HabitsCollection
+```
+{
+    _id: ObjectId,           // Primary Key
+    user_id: string,        // Foreign Key -> UsersCollection._id
+    name: string,           // Required
+    streak: integer,        // Default: 0
+    last_updated: datetime, // Optional
+    completion_dates: [     // Array of completion dates
+        datetime
+    ]
+}
+```
+
+### Relationships
+```
+Users (1) ----< Habits (Many)
+```
+
+### Indexes
+```
+UsersCollection:
+- _id: Primary Key Index
+- email: Unique Index
+- username: Index
+
+HabitsCollection:
+- _id: Primary Key Index
+- user_id: Index
+```
+
+### Entity Relationship Diagram (ASCII)
+```
++----------------+       +----------------+
+|     Users      |       |    Habits     |
++----------------+       +----------------+
+| PK _id        |       | PK _id        |
+| username      |       | FK user_id    |
+| email         |<------| name          |
+| password      |  1:M  | streak        |
++----------------+       | last_updated  |
+                        | completion_    |
+                        |   dates[]      |
+                        +----------------+
+
+Legend:
+PK: Primary Key
+FK: Foreign Key
+1:M: One-to-Many Relationship
+[]: Array/List
+```
+
+### Data Integrity Rules
+
+1. User Collection:
+   - Email must be unique
+   - Username must be unique
+   - Password must be hashed before storage
+
+2. Habits Collection:
+   - user_id must reference valid Users._id
+   - streak must be non-negative integer
+   - completion_dates must be ordered chronologically
+   - name must not be empty
+
+### Query Examples
+
+1. Get User's Habits:
+```javascript
+db.HabitsCollection.find({ user_id: "<user_id>" })
+```
+
+2. Get Habit Completion Stats:
+```javascript
+db.HabitsCollection.aggregate([
+    { $match: { _id: "<habit_id>" } },
+    { $project: {
+        name: 1,
+        streak: 1,
+        total_completions: { $size: "$completion_dates" }
+    }}
+])
+```
+
+3. Mark Habit as Complete:
+```javascript
+db.HabitsCollection.updateOne(
+    { _id: ObjectId("<habit_id>") },
+    { 
+        $set: {
+            streak: <new_streak>,
+            last_updated: new Date(),
+        },
+        $push: {
+            completion_dates: new Date()
+        }
+    }
+)
+```
+
+### Performance Considerations
+
+1. Indexing Strategy:
+   - Primary key indexes on _id fields
+   - Index on user_id for quick habit lookups
+   - Unique index on email for user lookups
+
+2. Data Access Patterns:
+   - Frequent reads on user's habits
+   - Daily updates to habit streaks and completion_dates
+   - User authentication lookups by email
+
+3. Optimization Techniques:
+   - Storing completion dates directly in habits for quick streak calculations
+   - Index on user_id for efficient habit retrieval
+   - Minimal document structure for optimal performance
+
+Note: While HabitsLogCollection is defined in the database setup, it's currently not used in the application. This collection could be utilized in future enhancements for more detailed habit tracking and analytics. 
+echo "# DBMS" >> README.md
