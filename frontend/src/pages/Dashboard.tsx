@@ -418,43 +418,29 @@ const Dashboard = () => {
                 <Heading size="md" color="gray.700" pr={2}>
                   {habit.name}
                 </Heading>
-                <Box position="relative">
-                  <Menu placement="bottom-end">
-                    <MenuButton
-                      as={IconButton}
-                      icon={<FaEdit />}
-                      variant="ghost"
-                      size="sm"
-                      colorScheme="gray"
-                      aria-label="Edit habit"
-                      _hover={{ bg: 'gray.100' }}
-                    />
-                    <MenuList
-                      zIndex="dropdown"
-                      shadow="lg"
-                      border="1px solid"
-                      borderColor="gray.200"
-                    >
-                      <MenuItem
-                        icon={<FaEdit />}
-                        onClick={() => {
-                          setEditingHabit(habit);
-                          onEditOpen();
-                        }}
-                      >
-                        Edit Name
-                      </MenuItem>
-                      <MenuItem
-                        icon={<FaTrash />}
-                        color="red.500"
-                        onClick={() => handleDeleteHabit(habit._id)}
-                        _hover={{ bg: 'red.50' }}
-                      >
-                        Delete Habit
-                      </MenuItem>
-                    </MenuList>
-                  </Menu>
-                </Box>
+                <HStack spacing={2}>
+                  <IconButton
+                    icon={<FaEdit />}
+                    variant="ghost"
+                    size="sm"
+                    colorScheme="gray"
+                    aria-label="Edit habit"
+                    onClick={() => {
+                      setEditingHabit(habit);
+                      onEditOpen();
+                    }}
+                    _hover={{ bg: 'gray.100' }}
+                  />
+                  <IconButton
+                    icon={<FaTrash />}
+                    variant="ghost"
+                    size="sm"
+                    colorScheme="red"
+                    aria-label="Delete habit"
+                    onClick={() => handleDeleteHabit(habit._id)}
+                    _hover={{ bg: 'red.50' }}
+                  />
+                </HStack>
               </Flex>
               
               <VStack align="stretch" spacing={4} position="relative" zIndex="base">
